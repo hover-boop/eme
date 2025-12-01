@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import "@/app/globals.css"; // Changed from "./globals.css"
-import { Providers } from "@/app/providers"; // Changed from "./providers"
+// FIX: Use @/app/ instead of ./
+import "@/app/globals.css";
+import { Providers } from "@/app/providers";
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
