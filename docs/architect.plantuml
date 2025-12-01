@@ -1,0 +1,149 @@
+@startuml Emerald AI Suite Architecture
+
+!define RECTANGLE class
+
+skinparam packageStyle rectangle
+skinparam component {
+  BackgroundColor<<frontend>> LightGreen
+  BackgroundColor<<backend>> LightBlue
+  BackgroundColor<<database>> LightYellow
+  BackgroundColor<<external>> LightGray
+}
+
+package "Frontend Layer" {
+  [Next.js 14 App Router] as NextJS <<frontend>>
+  [Public Pages] as Public <<frontend>>
+  [Auth Pages] as Auth <<frontend>>
+  [App Dashboard] as Dashboard <<frontend>>
+  [shadcn/ui Components] as UI <<frontend>>
+  [i18n Provider] as I18n <<frontend>>
+  
+  NextJS --> Public
+  NextJS --> Auth
+  NextJS --> Dashboard
+  Dashboard --> UI
+  NextJS --> I18n
+}
+
+package "API Layer" {
+  [Next.js API Routes] as API <<backend>>
+  [Auth API] as AuthAPI <<backend>>
+  [Organizations API] as OrgAPI <<backend>>
+  [Leads API] as LeadsAPI <<backend>>
+  [Bookings API] as BookingsAPI <<backend>>
+  [Conversations API] as ConvAPI <<backend>>
+  [Documents API] as DocsAPI <<backend>>
+  [Content API] as ContentAPI <<backend>>
+  [Workflows API] as WorkflowsAPI <<backend>>
+  [Billing API] as BillingAPI <<backend>>
+  [Webhooks] as Webhooks <<backend>>
+  
+  API --> AuthAPI
+  API --> OrgAPI
+  API --> LeadsAPI
+  API --> BookingsAPI
+  API --> ConvAPI
+  API --> DocsAPI
+  API --> ContentAPI
+  API --> WorkflowsAPI
+  API --> BillingAPI
+  API --> Webhooks
+}
+
+package "Business Logic Layer" {
+  [NextAuth] as NextAuth <<backend>>
+  [Prisma ORM] as Prisma <<backend>>
+  [Feature Gating] as FeatureGate <<backend>>
+  [Multi-tenant Context] as TenantContext <<backend>>
+  [Validation (Zod)] as Validation <<backend>>
+  
+  AuthAPI --> NextAuth
+  OrgAPI --> Prisma
+  LeadsAPI --> Prisma
+  BookingsAPI --> Prisma
+  ConvAPI --> Prisma
+  DocsAPI --> Prisma
+  ContentAPI --> Prisma
+  WorkflowsAPI --> Prisma
+  
+  Prisma --> FeatureGate
+  Prisma --> TenantContext
+  API --> Validation
+}
+
+package "Database Layer" {
+  database "PostgreSQL" as DB <<database>> {
+    [User]
+    [Organization]
+    [Membership]
+    [Subscription]
+    [Lead]
+    [Customer]
+    [Booking]
+    [Conversation]
+    [Message]
+    [Workflow]
+    [Template]
+    [Document]
+    [ReceptionistConfig]
+    [WhatsAppConfig]
+    [ChatWidgetConfig]
+    [ContentDraft]
+    [ApiKey]
+  }
+  
+  Prisma --> DB
+}
+
+package "External Services" {
+  [Stripe API] as Stripe <<external>>
+  [Email Service] as Email <<external>>
+  [AI Service (Stub)] as AI <<external>>
+  [WhatsApp Cloud API] as WhatsApp <<external>>
+  [Twilio (Voice)] as Twilio <<external>>
+  
+  BillingAPI --> Stripe
+  Webhooks --> Stripe
+  DocsAPI --> Email
+  ContentAPI --> AI
+  WorkflowsAPI --> WhatsApp
+  WorkflowsAPI --> Twilio
+}
+
+package "Middleware Layer" {
+  [Auth Middleware] as AuthMW
+  [Organization Middleware] as OrgMW
+  [Rate Limiting] as RateLimit
+  
+  NextJS --> AuthMW
+  AuthMW --> OrgMW
+  API --> RateLimit
+}
+
+NextJS --> API
+Dashboard --> API
+Auth --> AuthAPI
+
+note right of DB
+  Multi-tenant isolation:
+  - All queries scoped by organizationId
+  - Row-level security via Prisma
+  - Indexes on organizationId + common queries
+end note
+
+note right of FeatureGate
+  Plan-based feature gating:
+  - Starter: $49/mo
+  - Growth: $99/mo
+  - Premium: $199/mo
+  - Agency: $499/mo
+end note
+
+note right of I18n
+  Bilingual support:
+  - English (LTR)
+  - Arabic (RTL)
+  - Language switcher
+end note
+
+@enduml

@@ -1,0 +1,225 @@
+@startuml Emerald AI Suite UI Navigation Flow
+
+[*] --> PublicHome
+
+state "Public Website" as Public {
+  state "Home" as PublicHome
+  state "Pricing" as Pricing
+  state "Features" as Features
+  state "Industries" as Industries
+  state "Privacy Policy" as Privacy
+  state "Terms" as Terms
+  
+  PublicHome --> Pricing : "View Pricing"
+  PublicHome --> Features : "Explore Features"
+  PublicHome --> Industries : "Industry Solutions"
+  PublicHome --> Privacy : "Footer link"
+  PublicHome --> Terms : "Footer link"
+  
+  Pricing --> PublicHome : "Back to Home"
+  Features --> PublicHome : "Back to Home"
+  Industries --> PublicHome : "Back to Home"
+  Privacy --> PublicHome : "Back to Home"
+  Terms --> PublicHome : "Back to Home"
+}
+
+state "Authentication" as Auth {
+  state "Login" as Login
+  state "Register" as Register
+  state "Forgot Password" as ForgotPassword
+  state "Reset Password" as ResetPassword
+  
+  Login --> Register : "Sign up"
+  Register --> Login : "Sign in"
+  Login --> ForgotPassword : "Forgot password?"
+  ForgotPassword --> ResetPassword : "Email link"
+  ResetPassword --> Login : "Password reset"
+}
+
+state "Onboarding" as Onboarding {
+  state "Step 1: Business Info" as OnboardingStep1
+  state "Step 2: Language" as OnboardingStep2
+  state "Step 3: Plan Selection" as OnboardingStep3
+  
+  OnboardingStep1 --> OnboardingStep2 : "Next"
+  OnboardingStep2 --> OnboardingStep1 : "Back"
+  OnboardingStep2 --> OnboardingStep3 : "Next"
+  OnboardingStep3 --> OnboardingStep2 : "Back"
+}
+
+state "App Dashboard" as App {
+  state "Dashboard Home" as Dashboard {
+    Dashboard : Shows metrics
+    Dashboard : Recent activity
+    Dashboard : Quick actions
+  }
+  
+  state "AI Receptionist" as Receptionist {
+    Receptionist : Configuration
+    Receptionist : Training data
+    Receptionist : Voice/Chat settings
+  }
+  
+  state "WhatsApp Autopilot" as WhatsApp {
+    WhatsApp : Connection setup
+    WhatsApp : Automation rules
+    WhatsApp : Templates
+  }
+  
+  state "Chat Widget" as ChatWidget {
+    ChatWidget : Installation code
+    ChatWidget : Customization
+    ChatWidget : Settings
+  }
+  
+  state "Bookings & Calendar" as Bookings {
+    state "Calendar View" as CalendarView
+    state "Booking List" as BookingList
+    state "Create Booking" as CreateBooking
+    state "Booking Details" as BookingDetails
+    
+    CalendarView --> BookingList : "List view"
+    BookingList --> CalendarView : "Calendar view"
+    CalendarView --> CreateBooking : "New booking"
+    BookingList --> CreateBooking : "New booking"
+    CreateBooking --> CalendarView : "Save"
+    BookingList --> BookingDetails : "View booking"
+    BookingDetails --> BookingList : "Back"
+  }
+  
+  state "CRM & Leads" as CRM {
+    state "Lead Kanban" as LeadKanban
+    state "Lead Details" as LeadDetails
+    state "Create Lead" as CreateLead
+    
+    LeadKanban --> CreateLead : "Add lead"
+    LeadKanban --> LeadDetails : "View lead"
+    CreateLead --> LeadKanban : "Save"
+    LeadDetails --> LeadKanban : "Back"
+  }
+  
+  state "Inbox" as Inbox {
+    state "Conversation List" as ConversationList
+    state "Conversation View" as ConversationView
+    
+    ConversationList --> ConversationView : "Open conversation"
+    ConversationView --> ConversationList : "Back"
+  }
+  
+  state "AI Documents" as Documents {
+    state "Document Templates" as DocTemplates
+    state "Create Document" as CreateDocument
+    state "Document Preview" as DocumentPreview
+    state "Document List" as DocumentList
+    
+    DocTemplates --> CreateDocument : "Select template"
+    CreateDocument --> DocumentPreview : "Generate"
+    DocumentPreview --> DocumentList : "Save"
+    DocumentList --> DocumentPreview : "View"
+    DocumentPreview --> DocumentList : "Back"
+  }
+  
+  state "AI Content" as Content {
+    state "Content Types" as ContentTypes
+    state "Generate Content" as GenerateContent
+    state "Content Drafts" as ContentDrafts
+    
+    ContentTypes --> GenerateContent : "Select type"
+    GenerateContent --> ContentDrafts : "Save"
+    ContentDrafts --> GenerateContent : "Edit"
+  }
+  
+  state "Workflows" as Workflows {
+    state "Workflow List" as WorkflowList
+    state "Create Workflow" as CreateWorkflow
+    state "Workflow Details" as WorkflowDetails
+    
+    WorkflowList --> CreateWorkflow : "New workflow"
+    CreateWorkflow --> WorkflowList : "Save"
+    WorkflowList --> WorkflowDetails : "View/Edit"
+    WorkflowDetails --> WorkflowList : "Back"
+  }
+  
+  state "Settings" as Settings {
+    state "Business Profile" as BusinessProfile
+    state "User Management" as UserManagement
+    state "API Keys" as ApiKeys
+    
+    BusinessProfile : Edit org details
+    UserManagement : Invite/manage users
+    ApiKeys : Generate API keys
+  }
+  
+  state "Billing" as Billing {
+    state "Subscription Overview" as SubOverview
+    state "Upgrade Plan" as UpgradePlan
+    state "Billing History" as BillingHistory
+    
+    SubOverview --> UpgradePlan : "Upgrade"
+    SubOverview --> BillingHistory : "View history"
+    UpgradePlan --> SubOverview : "Complete"
+    BillingHistory --> SubOverview : "Back"
+  }
+  
+  ' Main navigation between modules
+  Dashboard --> Receptionist : "Sidebar nav"
+  Dashboard --> WhatsApp : "Sidebar nav"
+  Dashboard --> ChatWidget : "Sidebar nav"
+  Dashboard --> Bookings : "Sidebar nav"
+  Dashboard --> CRM : "Sidebar nav"
+  Dashboard --> Inbox : "Sidebar nav"
+  Dashboard --> Documents : "Sidebar nav"
+  Dashboard --> Content : "Sidebar nav"
+  Dashboard --> Workflows : "Sidebar nav"
+  Dashboard --> Settings : "Sidebar nav"
+  Dashboard --> Billing : "Sidebar nav"
+  
+  ' Back to dashboard from any module
+  Receptionist --> Dashboard : "Dashboard"
+  WhatsApp --> Dashboard : "Dashboard"
+  ChatWidget --> Dashboard : "Dashboard"
+  Bookings --> Dashboard : "Dashboard"
+  CRM --> Dashboard : "Dashboard"
+  Inbox --> Dashboard : "Dashboard"
+  Documents --> Dashboard : "Dashboard"
+  Content --> Dashboard : "Dashboard"
+  Workflows --> Dashboard : "Dashboard"
+  Settings --> Dashboard : "Dashboard"
+  Billing --> Dashboard : "Dashboard"
+}
+
+' Main flow transitions
+PublicHome --> Login : "Sign In"
+PublicHome --> Register : "Start Free Trial"
+Pricing --> Register : "Choose Plan"
+
+Register --> OnboardingStep1 : "Account created"
+OnboardingStep3 --> Dashboard : "Complete onboarding"
+
+Login --> Dashboard : "Authenticated"
+
+' Organization switching (available from any app page)
+note right of App
+  Organization Switcher:
+  Available in header on all app pages
+  Allows switching between organizations
+  Reloads current page with new org context
+end note
+
+' Logout flow
+Dashboard --> PublicHome : "Logout"
+
+note right of Public
+  Navigation depth: 1-2 levels
+  Clear back navigation
+  High-frequency features surfaced
+end note
+
+note right of App
+  Persistent sidebar navigation
+  Breadcrumbs for deep pages
+  Quick actions on dashboard
+  Max 3 levels deep
+end note
+
+@enduml

@@ -1,0 +1,450 @@
+@startuml Emerald AI Suite Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor<<enum>> LightYellow
+  BackgroundColor<<model>> LightBlue
+  BackgroundColor<<service>> LightGreen
+}
+
+' Enums
+enum Role <<enum>> {
+  OWNER
+  ADMIN
+  STAFF
+}
+
+enum SubscriptionPlan <<enum>> {
+  STARTER
+  GROWTH
+  PREMIUM
+  AGENCY
+}
+
+enum SubscriptionStatus <<enum>> {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+}
+
+enum BookingStatus <<enum>> {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum LeadStage <<enum>> {
+  NEW
+  CONTACTED
+  QUALIFIED
+  BOOKED
+  WON
+  LOST
+}
+
+enum ConversationSource <<enum>> {
+  WHATSAPP
+  EMAIL
+  INSTAGRAM
+  FACEBOOK
+  CHAT_WIDGET
+  VOICE
+}
+
+enum MessageRole <<enum>> {
+  CUSTOMER
+  AGENT
+  AI
+}
+
+enum Industry <<enum>> {
+  SALON
+  CLINIC
+  REAL_ESTATE
+  RESTAURANT
+  CAR_RENTAL
+  ECOMMERCE
+  OTHER
+}
+
+' Core Models
+class User <<model>> {
+  +id: string
+  +email: string
+  +name: string
+  +hashedPassword: string
+  +emailVerified: DateTime?
+  +image: string?
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +memberships: Membership[]
+  +createdDocuments: Document[]
+  +createdContentDrafts: ContentDraft[]
+}
+
+class Organization <<model>> {
+  +id: string
+  +name: string
+  +industry: Industry
+  +country: string
+  +address: string?
+  +logo: string?
+  +timezone: string
+  +primaryLanguage: string
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +memberships: Membership[]
+  +subscription: Subscription?
+  +leads: Lead[]
+  +customers: Customer[]
+  +bookings: Booking[]
+  +conversations: Conversation[]
+  +workflows: Workflow[]
+  +templates: Template[]
+  +documents: Document[]
+  +receptionistConfig: ReceptionistConfig?
+  +whatsappConfig: WhatsAppConfig?
+  +chatWidgetConfig: ChatWidgetConfig?
+  +contentDrafts: ContentDraft[]
+  +apiKeys: ApiKey[]
+}
+
+class Membership <<model>> {
+  +id: string
+  +userId: string
+  +organizationId: string
+  +role: Role
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +user: User
+  +organization: Organization
+}
+
+class Subscription <<model>> {
+  +id: string
+  +organizationId: string
+  +stripeCustomerId: string
+  +stripeSubscriptionId: string?
+  +plan: SubscriptionPlan
+  +status: SubscriptionStatus
+  +currentPeriodStart: DateTime?
+  +currentPeriodEnd: DateTime?
+  +cancelAtPeriodEnd: boolean
+  +trialEnd: DateTime?
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+}
+
+class Lead <<model>> {
+  +id: string
+  +organizationId: string
+  +name: string
+  +email: string?
+  +phone: string?
+  +source: string?
+  +stage: LeadStage
+  +valueEstimation: float?
+  +notes: string?
+  +tags: string[]
+  +assignedTo: string?
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+  +conversations: Conversation[]
+}
+
+class Customer <<model>> {
+  +id: string
+  +organizationId: string
+  +name: string
+  +email: string?
+  +phone: string
+  +address: string?
+  +notes: string?
+  +tags: string[]
+  +totalBookings: int
+  +totalSpent: float
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+  +bookings: Booking[]
+  +conversations: Conversation[]
+}
+
+class Booking <<model>> {
+  +id: string
+  +organizationId: string
+  +customerId: string
+  +customerName: string
+  +customerPhone: string
+  +customerEmail: string?
+  +service: string
+  +startTime: DateTime
+  +endTime: DateTime
+  +status: BookingStatus
+  +notes: string?
+  +reminderSent: boolean
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+  +customer: Customer
+}
+
+class Conversation <<model>> {
+  +id: string
+  +organizationId: string
+  +customerId: string?
+  +leadId: string?
+  +source: ConversationSource
+  +subject: string?
+  +status: string
+  +lastMessageAt: DateTime
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+  +customer: Customer?
+  +lead: Lead?
+  +messages: Message[]
+}
+
+class Message <<model>> {
+  +id: string
+  +conversationId: string
+  +role: MessageRole
+  +content: string
+  +metadata: Json?
+  +createdAt: DateTime
+  --
+  +conversation: Conversation
+}
+
+class Workflow <<model>> {
+  +id: string
+  +organizationId: string
+  +name: string
+  +trigger: string
+  +actions: Json
+  +isActive: boolean
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+}
+
+class Template <<model>> {
+  +id: string
+  +organizationId: string
+  +name: string
+  +type: string
+  +content: string
+  +variables: Json?
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+}
+
+class Document <<model>> {
+  +id: string
+  +organizationId: string
+  +createdBy: string
+  +type: string
+  +title: string
+  +content: Json
+  +pdfUrl: string?
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+  +creator: User
+}
+
+class ReceptionistConfig <<model>> {
+  +id: string
+  +organizationId: string
+  +displayName: string
+  +tone: string
+  +languages: string[]
+  +faqs: Json?
+  +enableVoice: boolean
+  +enableChat: boolean
+  +twilioPhoneNumber: string?
+  +webhookUrl: string?
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+}
+
+class WhatsAppConfig <<model>> {
+  +id: string
+  +organizationId: string
+  +phoneNumberId: string?
+  +accessToken: string?
+  +webhookVerifyToken: string?
+  +isConnected: boolean
+  +autoReplyEnabled: boolean
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+}
+
+class ChatWidgetConfig <<model>> {
+  +id: string
+  +organizationId: string
+  +position: string
+  +primaryColor: string
+  +welcomeMessage: string
+  +autoAnswer: boolean
+  +collectContactOnly: boolean
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+}
+
+class ContentDraft <<model>> {
+  +id: string
+  +organizationId: string
+  +createdBy: string
+  +type: string
+  +title: string
+  +content: string
+  +metadata: Json?
+  +createdAt: DateTime
+  +updatedAt: DateTime
+  --
+  +organization: Organization
+  +creator: User
+}
+
+class ApiKey <<model>> {
+  +id: string
+  +organizationId: string
+  +name: string
+  +keyHash: string
+  +lastUsed: DateTime?
+  +createdAt: DateTime
+  +expiresAt: DateTime?
+  --
+  +organization: Organization
+}
+
+' Service Classes
+class AuthService <<service>> {
+  +signUp(email: string, password: string, name: string): Promise<User>
+  +signIn(email: string, password: string): Promise<Session>
+  +signOut(): Promise<void>
+  +resetPassword(email: string): Promise<void>
+  +verifyEmail(token: string): Promise<boolean>
+}
+
+class OrganizationService <<service>> {
+  +createOrganization(data: CreateOrgInput, userId: string): Promise<Organization>
+  +getOrganization(orgId: string): Promise<Organization>
+  +updateOrganization(orgId: string, data: UpdateOrgInput): Promise<Organization>
+  +switchOrganization(userId: string, orgId: string): Promise<void>
+  +inviteMember(orgId: string, email: string, role: Role): Promise<Membership>
+  +removeMember(orgId: string, userId: string): Promise<void>
+}
+
+class FeatureGatingService <<service>> {
+  +checkPlanCapability(orgId: string, feature: string): Promise<boolean>
+  +getUsageLimits(orgId: string): Promise<UsageLimits>
+  +incrementUsage(orgId: string, metric: string): Promise<void>
+  +canAccessFeature(orgId: string, feature: string): Promise<boolean>
+}
+
+class BillingService <<service>> {
+  +createCheckoutSession(orgId: string, plan: SubscriptionPlan): Promise<string>
+  +createPortalSession(orgId: string): Promise<string>
+  +handleWebhook(event: StripeEvent): Promise<void>
+  +cancelSubscription(orgId: string): Promise<void>
+  +updateSubscription(orgId: string, newPlan: SubscriptionPlan): Promise<void>
+}
+
+class LeadService <<service>> {
+  +createLead(orgId: string, data: CreateLeadInput): Promise<Lead>
+  +updateLeadStage(leadId: string, stage: LeadStage): Promise<Lead>
+  +getLeadsByStage(orgId: string, stage: LeadStage): Promise<Lead[]>
+  +assignLead(leadId: string, userId: string): Promise<Lead>
+}
+
+class BookingService <<service>> {
+  +createBooking(orgId: string, data: CreateBookingInput): Promise<Booking>
+  +updateBookingStatus(bookingId: string, status: BookingStatus): Promise<Booking>
+  +getUpcomingBookings(orgId: string): Promise<Booking[]>
+  +sendReminder(bookingId: string): Promise<void>
+}
+
+class ConversationService <<service>> {
+  +createConversation(orgId: string, data: CreateConvInput): Promise<Conversation>
+  +sendMessage(convId: string, content: string, role: MessageRole): Promise<Message>
+  +getConversations(orgId: string, filters: ConvFilters): Promise<Conversation[]>
+  +generateAISuggestedReply(convId: string): Promise<string>
+}
+
+class DocumentService <<service>> {
+  +generateDocument(orgId: string, type: string, data: DocInput): Promise<Document>
+  +renderDocumentHTML(docId: string): Promise<string>
+  +generatePDF(docId: string): Promise<string>
+  +getDocuments(orgId: string): Promise<Document[]>
+}
+
+class ContentService <<service>> {
+  +generateContent(orgId: string, type: string, data: ContentInput): Promise<ContentDraft>
+  +getContentDrafts(orgId: string): Promise<ContentDraft[]>
+  +updateContentDraft(draftId: string, content: string): Promise<ContentDraft>
+}
+
+class WorkflowService <<service>> {
+  +createWorkflow(orgId: string, data: WorkflowInput): Promise<Workflow>
+  +executeWorkflow(workflowId: string, triggerData: Json): Promise<void>
+  +toggleWorkflow(workflowId: string, isActive: boolean): Promise<Workflow>
+}
+
+' Relationships
+User "1" -- "*" Membership
+Organization "1" -- "*" Membership
+Organization "1" -- "0..1" Subscription
+Organization "1" -- "*" Lead
+Organization "1" -- "*" Customer
+Organization "1" -- "*" Booking
+Organization "1" -- "*" Conversation
+Organization "1" -- "*" Workflow
+Organization "1" -- "*" Template
+Organization "1" -- "*" Document
+Organization "1" -- "0..1" ReceptionistConfig
+Organization "1" -- "0..1" WhatsAppConfig
+Organization "1" -- "0..1" ChatWidgetConfig
+Organization "1" -- "*" ContentDraft
+Organization "1" -- "*" ApiKey
+
+Customer "1" -- "*" Booking
+Customer "0..1" -- "*" Conversation
+Lead "0..1" -- "*" Conversation
+Conversation "1" -- "*" Message
+
+User "1" -- "*" Document : creates
+User "1" -- "*" ContentDraft : creates
+
+Membership --> Role
+Subscription --> SubscriptionPlan
+Subscription --> SubscriptionStatus
+Booking --> BookingStatus
+Lead --> LeadStage
+Conversation --> ConversationSource
+Message --> MessageRole
+Organization --> Industry
+
+@enduml

@@ -1,0 +1,357 @@
+@startuml Emerald AI Suite ER Diagram
+
+!define table(x) entity x << (T,#FFAAAA) >>
+!define primary_key(x) <b>x</b>
+!define foreign_key(x) <i>x</i>
+!define unique(x) <u>x</u>
+
+skinparam linetype ortho
+
+entity "User" as user {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * unique(email) : varchar(255)
+  * name : varchar(255)
+  * hashedPassword : varchar(255)
+  emailVerified : timestamp
+  image : varchar(500)
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_user_email (email)
+}
+
+entity "Organization" as org {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * name : varchar(255)
+  * industry : enum
+  * country : varchar(100)
+  address : text
+  logo : varchar(500)
+  * timezone : varchar(50)
+  * primaryLanguage : varchar(10)
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_org_industry (industry)
+  - idx_org_country (country)
+}
+
+entity "Membership" as membership {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * foreign_key(userId) : uuid <<FK>>
+  * foreign_key(organizationId) : uuid <<FK>>
+  * role : enum
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_membership_user (userId)
+  - idx_membership_org (organizationId)
+  - unique_user_org (userId, organizationId)
+}
+
+entity "Subscription" as subscription {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * unique(foreign_key(organizationId)) : uuid <<FK>>
+  * stripeCustomerId : varchar(255)
+  stripeSubscriptionId : varchar(255)
+  * plan : enum
+  * status : enum
+  currentPeriodStart : timestamp
+  currentPeriodEnd : timestamp
+  * cancelAtPeriodEnd : boolean
+  trialEnd : timestamp
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_subscription_org (organizationId)
+  - idx_subscription_stripe_customer (stripeCustomerId)
+  - idx_subscription_status (status)
+}
+
+entity "Lead" as lead {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * foreign_key(organizationId) : uuid <<FK>>
+  * name : varchar(255)
+  email : varchar(255)
+  phone : varchar(50)
+  source : varchar(100)
+  * stage : enum
+  valueEstimation : decimal(10,2)
+  notes : text
+  tags : json
+  assignedTo : uuid
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_lead_org (organizationId)
+  - idx_lead_stage (organizationId, stage)
+  - idx_lead_assigned (assignedTo)
+  - idx_lead_created (organizationId, createdAt)
+}
+
+entity "Customer" as customer {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * foreign_key(organizationId) : uuid <<FK>>
+  * name : varchar(255)
+  email : varchar(255)
+  * phone : varchar(50)
+  address : text
+  notes : text
+  tags : json
+  * totalBookings : integer
+  * totalSpent : decimal(10,2)
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_customer_org (organizationId)
+  - idx_customer_phone (organizationId, phone)
+  - idx_customer_email (organizationId, email)
+}
+
+entity "Booking" as booking {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * foreign_key(organizationId) : uuid <<FK>>
+  * foreign_key(customerId) : uuid <<FK>>
+  * customerName : varchar(255)
+  * customerPhone : varchar(50)
+  customerEmail : varchar(255)
+  * service : varchar(255)
+  * startTime : timestamp
+  * endTime : timestamp
+  * status : enum
+  notes : text
+  * reminderSent : boolean
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_booking_org (organizationId)
+  - idx_booking_customer (customerId)
+  - idx_booking_time (organizationId, startTime)
+  - idx_booking_status (organizationId, status)
+}
+
+entity "Conversation" as conversation {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * foreign_key(organizationId) : uuid <<FK>>
+  foreign_key(customerId) : uuid <<FK>>
+  foreign_key(leadId) : uuid <<FK>>
+  * source : enum
+  subject : varchar(500)
+  * status : varchar(50)
+  * lastMessageAt : timestamp
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_conversation_org (organizationId)
+  - idx_conversation_customer (customerId)
+  - idx_conversation_lead (leadId)
+  - idx_conversation_source (organizationId, source)
+  - idx_conversation_last_message (organizationId, lastMessageAt)
+}
+
+entity "Message" as message {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * foreign_key(conversationId) : uuid <<FK>>
+  * role : enum
+  * content : text
+  metadata : json
+  * createdAt : timestamp
+  --
+  Indexes:
+  - idx_message_conversation (conversationId, createdAt)
+}
+
+entity "Workflow" as workflow {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * foreign_key(organizationId) : uuid <<FK>>
+  * name : varchar(255)
+  * trigger : varchar(100)
+  * actions : json
+  * isActive : boolean
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_workflow_org (organizationId)
+  - idx_workflow_trigger (organizationId, trigger, isActive)
+}
+
+entity "Template" as template {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * foreign_key(organizationId) : uuid <<FK>>
+  * name : varchar(255)
+  * type : varchar(100)
+  * content : text
+  variables : json
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_template_org (organizationId)
+  - idx_template_type (organizationId, type)
+}
+
+entity "Document" as document {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * foreign_key(organizationId) : uuid <<FK>>
+  * foreign_key(createdBy) : uuid <<FK>>
+  * type : varchar(100)
+  * title : varchar(255)
+  * content : json
+  pdfUrl : varchar(500)
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_document_org (organizationId)
+  - idx_document_type (organizationId, type)
+  - idx_document_creator (createdBy)
+}
+
+entity "ReceptionistConfig" as receptionist {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * unique(foreign_key(organizationId)) : uuid <<FK>>
+  * displayName : varchar(255)
+  * tone : varchar(100)
+  * languages : json
+  faqs : json
+  * enableVoice : boolean
+  * enableChat : boolean
+  twilioPhoneNumber : varchar(50)
+  webhookUrl : varchar(500)
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_receptionist_org (organizationId)
+}
+
+entity "WhatsAppConfig" as whatsapp {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * unique(foreign_key(organizationId)) : uuid <<FK>>
+  phoneNumberId : varchar(255)
+  accessToken : text
+  webhookVerifyToken : varchar(255)
+  * isConnected : boolean
+  * autoReplyEnabled : boolean
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_whatsapp_org (organizationId)
+}
+
+entity "ChatWidgetConfig" as chatwidget {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * unique(foreign_key(organizationId)) : uuid <<FK>>
+  * position : varchar(50)
+  * primaryColor : varchar(7)
+  * welcomeMessage : text
+  * autoAnswer : boolean
+  * collectContactOnly : boolean
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_chatwidget_org (organizationId)
+}
+
+entity "ContentDraft" as content {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * foreign_key(organizationId) : uuid <<FK>>
+  * foreign_key(createdBy) : uuid <<FK>>
+  * type : varchar(100)
+  * title : varchar(255)
+  * content : text
+  metadata : json
+  * createdAt : timestamp
+  * updatedAt : timestamp
+  --
+  Indexes:
+  - idx_content_org (organizationId)
+  - idx_content_type (organizationId, type)
+  - idx_content_creator (createdBy)
+}
+
+entity "ApiKey" as apikey {
+  * primary_key(id) : uuid <<PK>>
+  --
+  * foreign_key(organizationId) : uuid <<FK>>
+  * name : varchar(255)
+  * keyHash : varchar(255)
+  lastUsed : timestamp
+  * createdAt : timestamp
+  expiresAt : timestamp
+  --
+  Indexes:
+  - idx_apikey_org (organizationId)
+  - idx_apikey_hash (keyHash)
+}
+
+' Relationships
+user ||--o{ membership : "has"
+org ||--o{ membership : "has"
+org ||--|| subscription : "has"
+org ||--o{ lead : "owns"
+org ||--o{ customer : "owns"
+org ||--o{ booking : "owns"
+org ||--o{ conversation : "owns"
+org ||--o{ workflow : "owns"
+org ||--o{ template : "owns"
+org ||--o{ document : "owns"
+org ||--|| receptionist : "has"
+org ||--|| whatsapp : "has"
+org ||--|| chatwidget : "has"
+org ||--o{ content : "owns"
+org ||--o{ apikey : "owns"
+
+customer ||--o{ booking : "makes"
+customer ||--o{ conversation : "participates"
+lead ||--o{ conversation : "participates"
+conversation ||--o{ message : "contains"
+
+user ||--o{ document : "creates"
+user ||--o{ content : "creates"
+
+note right of org
+  Multi-tenant isolation:
+  All queries MUST include
+  WHERE organizationId = ?
+end note
+
+note right of subscription
+  Stripe integration:
+  - stripeCustomerId for billing
+  - stripeSubscriptionId for active subscription
+  - Webhook updates status
+end note
+
+note right of membership
+  Role-based access:
+  - OWNER: Full access
+  - ADMIN: Manage users + data
+  - STAFF: Limited access
+end note
+
+@enduml

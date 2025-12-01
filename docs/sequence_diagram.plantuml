@@ -1,0 +1,423 @@
+@startuml Emerald AI Suite Sequence Diagrams
+
+' User Registration and Onboarding Flow
+actor User
+participant "Next.js UI" as UI
+participant "Auth API" as AuthAPI
+participant "NextAuth" as NextAuth
+participant "Prisma" as Prisma
+participant "PostgreSQL" as DB
+participant "Org API" as OrgAPI
+
+== User Registration ==
+User -> UI: Navigate to /auth/register
+UI -> User: Display registration form
+
+User -> UI: Submit form\n(email, password, name)
+note right
+  Input: {
+    "email": "user@example.com",
+    "password": "securepass123",
+    "name": "John Doe"
+  }
+end note
+
+UI -> AuthAPI: POST /api/auth/register
+AuthAPI -> NextAuth: Hash password
+NextAuth --> AuthAPI: Hashed password
+AuthAPI -> Prisma: Create User
+Prisma -> DB: INSERT INTO User
+DB --> Prisma: User created
+Prisma --> AuthAPI: User object
+note right
+  Output: {
+    "id": "uuid",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "createdAt": "2025-01-01T00:00:00Z"
+  }
+end note
+
+AuthAPI -> NextAuth: Create session
+NextAuth --> AuthAPI: Session token
+AuthAPI --> UI: Success + redirect to /onboarding
+UI --> User: Redirect to onboarding
+
+== Onboarding Flow (Step 1: Business Info) ==
+User -> UI: View onboarding step 1
+UI -> User: Display business info form
+
+User -> UI: Submit business info\n(name, industry, country)
+note right
+  Input: {
+    "name": "Emerald Salon",
+    "industry": "SALON",
+    "country": "UAE"
+  }
+end note
+
+UI -> OrgAPI: POST /api/organizations
+OrgAPI -> Prisma: Begin transaction
+Prisma -> DB: INSERT INTO Organization
+DB --> Prisma: Organization created
+
+Prisma -> DB: INSERT INTO Membership\n(userId, orgId, role: OWNER)
+DB --> Prisma: Membership created
+
+Prisma -> DB: INSERT INTO Subscription\n(orgId, plan: STARTER, status: TRIALING)
+DB --> Prisma: Subscription created
+
+Prisma -> OrgAPI: Commit transaction
+note right
+  Output: {
+    "organization": {
+      "id": "uuid",
+      "name": "Emerald Salon",
+      "industry": "SALON"
+    },
+    "membership": {
+      "role": "OWNER"
+    }
+  }
+end note
+
+OrgAPI --> UI: Organization created
+UI --> User: Show step 2
+
+== Onboarding Flow (Step 2: Language) ==
+User -> UI: Select primary language (English/Arabic)
+UI -> OrgAPI: PATCH /api/organizations/{orgId}
+note right
+  Input: {
+    "primaryLanguage": "ar"
+  }
+end note
+
+OrgAPI -> Prisma: Update Organization
+Prisma -> DB: UPDATE Organization SET primaryLanguage
+DB --> Prisma: Updated
+Prisma --> OrgAPI: Organization updated
+OrgAPI --> UI: Success
+UI --> User: Show step 3
+
+== Onboarding Flow (Step 3: Plan Selection) ==
+User -> UI: Select plan (Growth)
+UI --> User: Show plan features
+User -> UI: Confirm plan
+UI -> UI: Store selection in session
+UI --> User: Redirect to /app (dashboard)
+
+|||
+
+== Lead Creation Flow ==
+participant "CRM UI" as CRMUI
+participant "Leads API" as LeadsAPI
+participant "Feature Gate" as FeatureGate
+participant "Workflow Service" as WorkflowService
+
+User -> CRMUI: Navigate to /app/crm
+CRMUI -> LeadsAPI: GET /api/leads?orgId={orgId}
+LeadsAPI -> Prisma: findMany({ where: { organizationId } })
+Prisma -> DB: SELECT * FROM Lead WHERE organizationId = ?
+DB --> Prisma: Lead records
+Prisma --> LeadsAPI: Lead[]
+note right
+  Output: [{
+    "id": "uuid",
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "stage": "NEW",
+    "source": "WhatsApp"
+  }]
+end note
+LeadsAPI --> CRMUI: Lead list
+CRMUI --> User: Display leads in kanban
+
+User -> CRMUI: Click "Add Lead"
+CRMUI -> User: Show lead form
+
+User -> CRMUI: Submit lead form
+note right
+  Input: {
+    "name": "Ahmed Ali",
+    "phone": "+971501234567",
+    "email": "ahmed@example.com",
+    "source": "WhatsApp",
+    "stage": "NEW"
+  }
+end note
+
+CRMUI -> LeadsAPI: POST /api/leads
+LeadsAPI -> FeatureGate: checkPlanCapability(orgId, "leads")
+FeatureGate -> Prisma: Get subscription + usage
+Prisma -> DB: SELECT FROM Subscription, check lead count
+DB --> Prisma: Plan: STARTER, leads: 45/200
+Prisma --> FeatureGate: Usage data
+FeatureGate --> LeadsAPI: true (within limits)
+
+LeadsAPI -> Prisma: Create Lead
+Prisma -> DB: INSERT INTO Lead
+DB --> Prisma: Lead created
+Prisma --> LeadsAPI: Lead object
+
+LeadsAPI -> WorkflowService: Trigger "new_lead_created"
+WorkflowService -> Prisma: Find active workflows with trigger
+Prisma -> DB: SELECT FROM Workflow WHERE trigger = 'new_lead_created'
+DB --> Prisma: Workflow[]
+WorkflowService -> WorkflowService: Execute workflow actions\n(send WhatsApp, assign to staff)
+WorkflowService --> LeadsAPI: Workflow executed
+
+LeadsAPI --> CRMUI: Lead created
+note right
+  Output: {
+    "id": "uuid",
+    "name": "Ahmed Ali",
+    "phone": "+971501234567",
+    "stage": "NEW",
+    "createdAt": "2025-01-01T10:00:00Z"
+  }
+end note
+CRMUI --> User: Show new lead in kanban
+
+|||
+
+== Booking Creation Flow ==
+participant "Booking UI" as BookingUI
+participant "Bookings API" as BookingsAPI
+
+User -> BookingUI: Navigate to /app/bookings
+User -> BookingUI: Click "Create Booking"
+BookingUI -> User: Show booking form
+
+User -> BookingUI: Submit booking
+note right
+  Input: {
+    "customerName": "Sara Ahmed",
+    "customerPhone": "+971509876543",
+    "service": "Haircut & Color",
+    "startTime": "2025-01-15T14:00:00Z",
+    "endTime": "2025-01-15T16:00:00Z"
+  }
+end note
+
+BookingUI -> BookingsAPI: POST /api/bookings
+BookingsAPI -> Prisma: Begin transaction
+
+Prisma -> DB: Find or create Customer
+DB --> Prisma: Customer object
+
+Prisma -> DB: INSERT INTO Booking
+DB --> Prisma: Booking created
+
+Prisma -> DB: UPDATE Customer SET totalBookings++
+DB --> Prisma: Customer updated
+
+Prisma -> BookingsAPI: Commit transaction
+note right
+  Output: {
+    "id": "uuid",
+    "customerName": "Sara Ahmed",
+    "service": "Haircut & Color",
+    "startTime": "2025-01-15T14:00:00Z",
+    "status": "SCHEDULED"
+  }
+end note
+
+BookingsAPI -> WorkflowService: Trigger "booking_created"
+WorkflowService -> WorkflowService: Send confirmation WhatsApp
+WorkflowService --> BookingsAPI: Done
+
+BookingsAPI --> BookingUI: Booking created
+BookingUI --> User: Show booking in calendar
+
+|||
+
+== Stripe Subscription Flow ==
+participant "Billing UI" as BillingUI
+participant "Billing API" as BillingAPI
+participant "Stripe" as Stripe
+
+User -> BillingUI: Navigate to /app/billing
+BillingUI -> BillingAPI: GET /api/billing/subscription?orgId={orgId}
+BillingAPI -> Prisma: Get subscription
+Prisma -> DB: SELECT FROM Subscription
+DB --> Prisma: Subscription object
+Prisma --> BillingAPI: Subscription
+BillingAPI --> BillingUI: Current plan: STARTER
+BillingUI --> User: Display current plan
+
+User -> BillingUI: Click "Upgrade to Growth"
+BillingUI -> BillingAPI: POST /api/billing/checkout
+note right
+  Input: {
+    "organizationId": "uuid",
+    "plan": "GROWTH"
+  }
+end note
+
+BillingAPI -> Stripe: Create Checkout Session
+note right
+  Stripe API Input: {
+    "customer": "cus_xxx",
+    "line_items": [{
+      "price": "price_growth_monthly",
+      "quantity": 1
+    }],
+    "mode": "subscription",
+    "success_url": "https://app.emerald.ai/billing/success",
+    "cancel_url": "https://app.emerald.ai/billing"
+  }
+end note
+
+Stripe --> BillingAPI: Session URL
+note right
+  Output: {
+    "sessionId": "cs_xxx",
+    "url": "https://checkout.stripe.com/..."
+  }
+end note
+
+BillingAPI --> BillingUI: Checkout URL
+BillingUI --> User: Redirect to Stripe Checkout
+
+User -> Stripe: Complete payment
+Stripe -> Stripe: Process payment
+Stripe -> BillingAPI: POST /api/webhooks/stripe\n(checkout.session.completed)
+note right
+  Webhook payload: {
+    "type": "checkout.session.completed",
+    "data": {
+      "object": {
+        "id": "cs_xxx",
+        "customer": "cus_xxx",
+        "subscription": "sub_xxx",
+        "metadata": {
+          "organizationId": "uuid"
+        }
+      }
+    }
+  }
+end note
+
+BillingAPI -> Prisma: Update Subscription
+Prisma -> DB: UPDATE Subscription\nSET plan = 'GROWTH',\nstatus = 'ACTIVE',\nstripeSubscriptionId = 'sub_xxx'
+DB --> Prisma: Updated
+Prisma --> BillingAPI: Success
+BillingAPI --> Stripe: 200 OK
+
+Stripe --> User: Redirect to success_url
+User -> BillingUI: Return to /app/billing
+BillingUI -> BillingAPI: GET /api/billing/subscription
+BillingAPI -> Prisma: Get subscription
+Prisma --> BillingAPI: Updated subscription
+BillingAPI --> BillingUI: Current plan: GROWTH
+BillingUI --> User: Display updated plan
+
+|||
+
+== AI Content Generation Flow ==
+participant "Content UI" as ContentUI
+participant "Content API" as ContentAPI
+participant "AI Service" as AI
+
+User -> ContentUI: Navigate to /app/content
+User -> ContentUI: Select "Facebook Ad" tab
+ContentUI -> User: Show content form
+
+User -> ContentUI: Submit content request
+note right
+  Input: {
+    "type": "facebook_ad",
+    "productName": "Luxury Spa Package",
+    "targetAudience": "Women 25-45 in Dubai",
+    "tone": "luxurious",
+    "language": "en"
+  }
+end note
+
+ContentUI -> ContentAPI: POST /api/content/generate
+ContentAPI -> FeatureGate: checkPlanCapability(orgId, "content_generation")
+FeatureGate --> ContentAPI: true
+
+ContentAPI -> AI: Generate content
+note right
+  AI Prompt: "Create a Facebook ad for
+  Luxury Spa Package targeting Women 25-45
+  in Dubai with luxurious tone in English"
+end note
+
+AI --> ContentAPI: Generated content
+note right
+  AI Output: {
+    "headline": "Indulge in Pure Luxury",
+    "body": "Escape to tranquility...",
+    "cta": "Book Your Experience"
+  }
+end note
+
+ContentAPI -> Prisma: Create ContentDraft
+Prisma -> DB: INSERT INTO ContentDraft
+DB --> Prisma: ContentDraft created
+Prisma --> ContentAPI: ContentDraft object
+
+ContentAPI --> ContentUI: Generated content
+note right
+  Output: {
+    "id": "uuid",
+    "type": "facebook_ad",
+    "title": "Luxury Spa Package Ad",
+    "content": "Indulge in Pure Luxury...",
+    "createdAt": "2025-01-01T12:00:00Z"
+  }
+end note
+
+ContentUI --> User: Display generated content
+User -> ContentUI: Click "Save"
+ContentUI --> User: Content saved to drafts
+
+|||
+
+== Multi-tenant Organization Switching ==
+participant "Org Switcher" as OrgSwitcher
+participant "Session API" as SessionAPI
+
+User -> OrgSwitcher: Click organization dropdown
+OrgSwitcher -> SessionAPI: GET /api/organizations/user-orgs
+SessionAPI -> Prisma: Get user memberships
+Prisma -> DB: SELECT FROM Membership\nJOIN Organization\nWHERE userId = ?
+DB --> Prisma: Membership[] with Organization[]
+Prisma --> SessionAPI: Organizations list
+note right
+  Output: [{
+    "id": "uuid-1",
+    "name": "Emerald Salon",
+    "role": "OWNER"
+  }, {
+    "id": "uuid-2",
+    "name": "Diamond Clinic",
+    "role": "ADMIN"
+  }]
+end note
+
+SessionAPI --> OrgSwitcher: Organizations
+OrgSwitcher --> User: Display organization list
+
+User -> OrgSwitcher: Select "Diamond Clinic"
+OrgSwitcher -> SessionAPI: POST /api/organizations/switch
+note right
+  Input: {
+    "organizationId": "uuid-2"
+  }
+end note
+
+SessionAPI -> NextAuth: Update session\nSet currentOrgId = "uuid-2"
+NextAuth --> SessionAPI: Session updated
+SessionAPI --> OrgSwitcher: Success
+OrgSwitcher -> UI: Reload dashboard
+UI -> OrgAPI: GET /api/dashboard?orgId=uuid-2
+OrgAPI -> Prisma: Get dashboard data for uuid-2
+Prisma --> OrgAPI: Dashboard data
+OrgAPI --> UI: Data
+UI --> User: Display Diamond Clinic dashboard
+
+@enduml
