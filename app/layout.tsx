@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-// FIX: Use @/app/ instead of ./
+// FIX: Changed relative paths (./) to absolute alias paths (@/app/)
 import "@/app/globals.css";
 import { Providers } from "@/app/providers";
 import { Toaster } from "@/components/ui/toaster";
